@@ -1,0 +1,25 @@
+@host = http://localhost:8080
+# dynamic variables
+# "id": "{{$uuid}}",
+# "createdAt": "{{$timestamp}}"
+
+### Get all products
+GET {{host}}/api/products
+Accept: application/json
+
+### Create a product
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Coffee Mug",
+  "description": "Great white mug",
+  "price": 9.99
+}
+
+### Get product by id
+GET {{host}}/api/products/1
+Accept: application/json
+
+###
+dotnet add package Microsoft.AspNetCore.Mvc.Testing 

@@ -1,0 +1,22 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sample-dotnet-webapp", "sample-dotnet-webapp\sample-dotnet-webapp.csproj", "{C262D94B-6864-47E1-90DB-D7EBB89ABBAD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sample-dotnet-webapp.Tests", "sample-dotnet-webapp.Tests\sample-dotnet-webapp.Tests.csproj", "{A20E60CD-5304-4E20-B9E6-B0D5B865B1AE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C262D94B-6864-47E1-90DB-D7EBB89ABBAD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C262D94B-6864-47E1-90DB-D7EBB89ABBAD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C262D94B-6864-47E1-90DB-D7EBB89ABBAD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C262D94B-6864-47E1-90DB-D7EBB89ABBAD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A20E60CD-5304-4E20-B9E6-B0D5B865B1AE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A20E60CD-5304-4E20-B9E6-B0D5B865B1AE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A20E60CD-5304-4E20-B9E6-B0D5B865B1AE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A20E60CD-5304-4E20-B9E6-B0D5B865B1AE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
