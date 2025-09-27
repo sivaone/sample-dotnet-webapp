@@ -1,0 +1,152 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+    tags:
+      - "[0-9]+.[0-9]+.[0-9]+"  # release tags like 1.2.3
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  packages: write   # needed to push to GHCR
+  id-token: write
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_VERSION: "9.0.x"
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-test:
+    name: Build, Test, Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # required for GitVersion to see tags/history
+
+      - name: GitVersion (determine version)
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore ./sample-dotnet-webapp.sln
+
+      - name: Build (Release) with version stamping
+        run: |
+          dotnet build ./sample-dotnet-webapp.sln --configuration Release --no-restore \
+            -p:Version=${{ steps.gitversion.outputs.semVer }} \
+            -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+
+      - name: Test with coverage (fail if line coverage < 80%)
+        run: |
+          dotnet test ./sample-dotnet-webapp.Tests/sample-dotnet-webapp.Tests.csproj \
+            --configuration Release \
+            --no-build \
+            -p:CollectCoverage=true \
+            -p:CoverletOutputFormat=cobertura \
+            -p:CoverletOutput=$(pwd)/TestResults/coverage/ \
+            -p:Threshold=80 \
+            -p:ThresholdType=line \
+            -p:ThresholdStat=total \
+            --logger "trx;LogFileName=test-results.trx"
+
+      - name: Generate coverage report (summary)
+        if: always()
+        uses: danielpalme/ReportGenerator-GitHub-Action@v5
+        with:
+          reports: TestResults/coverage/coverage.cobertura.xml;**/TestResults/**/coverage.cobertura.xml
+          targetdir: TestResults/CoverageReport
+          reporttypes: HtmlInline;Cobertura;MarkdownSummaryGithub
+          historydir: TestResults/CoverageReport/History
+
+      - name: Publish test and coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-and-coverage
+          path: |
+            **/TestResults/*.trx
+            TestResults/CoverageReport
+            **/coverage.cobertura.xml
+          if-no-files-found: warn
+
+  docker-image:
+    name: Build and Push Docker image
+    needs: build-and-test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: GitVersion (determine version)
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata (tags, labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ steps.gitversion.outputs.semVer }}
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=tag
+            type=sha
+
+      - name: Build image (push on non-PR)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./sample-dotnet-webapp
+          file: ./sample-dotnet-webapp/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: |
+            ${{ steps.meta.outputs.labels }}
+            org.opencontainers.image.version=${{ steps.gitversion.outputs.semVer }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Export image as artifact (PRs only)
+        if: github.event_name == 'pull_request'
+        uses: ishworkh/docker-image-artifact-upload@v1
+        with:
+          image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+          retention-days: 7
