@@ -1,8 +1,6 @@
-mode: Mainline
+workflow: TrunkBased/preview1
 branches:
   main:
     regex: ^main$
-    tag: ''
-ignore:
-  sha: []
-tag-prefix: ''
+    increment: Patch
+    is-main-branch: true
