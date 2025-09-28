@@ -11,8 +11,8 @@ on:
 
 permissions:
   contents: read
-  packages: write   # needed to push to GHCR
   id-token: write
+  # packages: write   # needed to push to GHCR
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -64,6 +64,16 @@ jobs:
           dotnet build ./sample-dotnet-webapp.sln --configuration Release --no-restore \
             -p:Version=${{ steps.gitversion.outputs.semVer }} \
             -p:InformationalVersion=${{ steps.gitversion.outputs.informationalVersion }}
+
+      - name: Upload DLL artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dll-${{ steps.gitversion.outputs.semVer }}
+          path: |
+            sample-dotnet-webapp/bin/Release/**/*.dll
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Test with coverage (fail if line coverage < 80%)
         run: |
@@ -127,19 +137,36 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Log in to GHCR
+      # - name: Log in to GHCR
+      #   if: github.event_name != 'pull_request'
+      #   uses: docker/login-action@v3
+      #   with:
+      #     registry: ${{ env.REGISTRY }}
+      #     username: ${{ github.actor }}
+      #     password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials (OIDC)
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        if: github.event_name != 'pull_request'
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set ECR repository name
+        run: | 
+          echo "${{ github.event.repository.name }}"
+          echo "${{ steps.login-ecr.outputs.registry }}"
 
       - name: Extract Docker metadata (tags, labels)
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ steps.login-ecr.outputs.registry }}/${{ vars.ECR_REPOSITORY }} # images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=${{ steps.gitversion.outputs.semVer }}
             type=raw,value=latest,enable={{is_default_branch}}
