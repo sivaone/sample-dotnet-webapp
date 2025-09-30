@@ -1,0 +1,30 @@
+﻿<RunSettings>
+  <DataCollectionRunSettings>
+    <DataCollectors>
+      <DataCollector friendlyName="XPlat Code Coverage">
+        <Configuration>
+          <Format>cobertura</Format>
+          <OutputDirectory>TestResults\Coverage</OutputDirectory>
+
+          <Include>
+            <ModulePath>.*YourApp\.dll$</ModulePath>
+          </Include>
+
+          <Exclude>
+            <ModulePath>.*Tests\.dll$</ModulePath>
+            <Attribute>GeneratedCodeAttribute</Attribute>
+          </Exclude>
+
+          <SkipAutoProps>true</SkipAutoProps>
+          <IncludeSource>true</IncludeSource>
+
+          <Threshold>
+            <ThresholdType>line</ThresholdType>
+            <ThresholdStat>total</ThresholdStat>
+            <Value>80</Value>
+          </Threshold>
+        </Configuration>
+      </DataCollector>
+    </DataCollectors>
+  </DataCollectionRunSettings>
+</RunSettings>

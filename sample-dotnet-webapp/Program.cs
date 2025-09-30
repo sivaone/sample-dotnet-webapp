@@ -16,6 +16,8 @@ app.UseSwaggerUI(options =>
     options.SwaggerEndpoint("/openapi/v1.json", "API V1");
 });
 
+// TODO: Test rulesets, remove later
+var num = 100;
 
 app.Run();
 

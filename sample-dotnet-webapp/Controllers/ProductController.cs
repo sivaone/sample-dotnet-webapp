@@ -56,4 +56,6 @@ public class ProductController : ControllerBase
             return NotFound(new { message = $"Product with id '{id}' not found." });
         }
     }
+
+    public Int32 GetAge() => 42;
 }

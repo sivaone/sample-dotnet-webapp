@@ -1,0 +1,103 @@
+﻿# Top-most EditorConfig file
+root = true
+
+# Applies to all C# files
+[*.cs]
+
+############################
+# Code Style Preferences
+############################
+
+# Use var when type is apparent
+dotnet_style_require_var_when_type_is_apparent = true:suggestion
+
+# Use explicit type when type is not apparent
+dotnet_style_require_var_when_type_is_not_apparent = false:warning
+
+# Prefer expression-bodied members
+csharp_style_expression_bodied_methods = true:suggestion
+csharp_style_expression_bodied_properties = true:suggestion
+
+# Prefer pattern matching
+csharp_style_pattern_matching_over_is_with_cast_check = true:suggestion
+
+# Prefer switch expressions
+csharp_style_prefer_switch_expression = true:suggestion
+
+############################
+# Naming Conventions
+############################
+
+# Private fields should be _camelCase
+dotnet_naming_rule.private_fields_should_be_camel_case.severity = warning
+dotnet_naming_rule.private_fields_should_be_camel_case.symbols = private_fields
+dotnet_naming_rule.private_fields_should_be_camel_case.style = camel_case_with_underscore
+
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.required_modifiers = readonly
+
+dotnet_naming_style.camel_case_with_underscore.capitalization = camel_case
+dotnet_naming_style.camel_case_with_underscore.required_prefix = _
+dotnet_naming_style.camel_case_with_underscore.required_suffix =
+
+############################
+# Roslyn Analyzer Rules
+############################
+
+# CA1822: Mark members as static
+dotnet_diagnostic.CA1822.severity = warning
+
+# CA2007: Do not directly await a Task without ConfigureAwait
+dotnet_diagnostic.CA2007.severity = error
+
+# CA1062: Validate arguments of public methods
+dotnet_diagnostic.CA1062.severity = error
+
+# CA1305: Specify IFormatProvider
+dotnet_diagnostic.CA1305.severity = warning
+
+# CA1801: Review unused parameters
+dotnet_diagnostic.CA1801.severity = warning
+
+############################
+# StyleCop Rules (if installed)
+############################
+
+# SA1309: Field names should not begin with underscore (override default)
+dotnet_diagnostic.SA1309.severity = none
+
+# SA1600: Elements must be documented
+dotnet_diagnostic.SA1600.severity = warning
+
+# SA1121: Use built-in type aliases (e.g., int instead of Int32)
+dotnet_diagnostic.SA1121.severity = warning
+
+# SA1401: Fields should be private
+dotnet_diagnostic.SA1401.severity = error
+
+############################
+# IDE Rules 
+############################
+
+dotnet_diagnostic.IDE0059.severity = error # Not working
+
+############################
+# Formatting Rules
+############################
+
+# Indentation
+indent_style = space
+indent_size = 4
+
+# Line endings
+end_of_line = lf
+
+# Charset
+charset = utf-8
+
+# Trim trailing whitespace
+trim_trailing_whitespace = true
+
+# Insert final newline
+insert_final_newline = true
