@@ -1,13 +1,16 @@
-@host = http://localhost:5080
+# @host = http://localhost:5080
 # dynamic variables
 # "id": "{{$uuid}}",
 # "createdAt": "{{$timestamp}}"
+
+### Health check
+GET {{host}}/health
 
 ### Get all products
 GET {{host}}/api/products
 Accept: application/json
 
-### Create a product
+### Create a product 1
 POST {{host}}/api/products
 Content-Type: application/json
 
@@ -15,6 +18,16 @@ Content-Type: application/json
   "name": "Coffee Mug",
   "description": "Great white mug",
   "price": 9.99
+}
+
+### Create a product 2
+POST {{host}}/api/products
+Content-Type: application/json
+
+{
+  "name": "Mouse Pad",
+  "description": "Hello kitty mouse pad",
+  "price": 14.99
 }
 
 ### Get product by id

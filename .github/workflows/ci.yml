@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main, ecs_deploy ]
+    branches: [ main ]
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"  # release tags like 1.2.3
   pull_request:
