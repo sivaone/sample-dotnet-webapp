@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, ecs_deploy ]
     tags:
       - "[0-9]+.[0-9]+.[0-9]+"  # release tags like 1.2.3
   pull_request:
@@ -20,7 +20,7 @@ concurrency:
 
 env:
   DOTNET_VERSION: "9.0.x"
-  REGISTRY: ghcr.io
+#  REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
@@ -196,10 +196,20 @@ jobs:
         with:
           image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
           retention-days: 7
-          
+  
+  ecs-deploy: 
+    name: Deploy to ECS Fargate
+    needs: docker-image
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
       - name: Inject executionRoleArn from secret
         run: |
           sed -i 's|__EXECUTION_ROLE_ARN__|${{ secrets.ECS_EXECUTION_ROLE_ARN }}|g' .aws/ecs-task-definition.json
+          sed -i 's|__TASK_ROLE_ARN__|${{ secrets.ECS_TASK_ROLE_ARN }}|g' .aws/ecs-task-definition.json
           
       - name: Render ECS task definition
         id: render-task
@@ -209,10 +219,10 @@ jobs:
           task-definition: .aws/ecs-task-definition.json
           container-name: sample-dotnet-webapp
           image: ${{ steps.meta.outputs.tags }} 
-          
+             
       - name: Deploy to ECS Fargate
         if: github.event_name != 'pull_request'
-        uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task.outputs.task-definition }}
           service: ${{ vars.ECS_SERVICE }}
