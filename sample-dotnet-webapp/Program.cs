@@ -1,8 +1,13 @@
+using Amazon.SQS;
+using sample_dotnet_webapp.Services;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
+builder.Services.AddAWSService<IAmazonSQS>();
+builder.Services.AddSingleton<SqsService>();
 
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
