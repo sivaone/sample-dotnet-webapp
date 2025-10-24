@@ -8,7 +8,7 @@ public class SqsService(IAmazonSQS sqs, IConfiguration configuration)
     private readonly string _queueUrl = 
         configuration["AWS:SQS:QueueUrl"] ?? throw new ArgumentException("SQS QueueUrl is not configured.");
 
-    public async Task SendMessageAsync(string messageBody)
+    public virtual async Task SendMessageAsync(string messageBody)
     {
         var sendMessageRequest = new SendMessageRequest
         {
