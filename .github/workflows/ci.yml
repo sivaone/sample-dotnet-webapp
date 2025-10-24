@@ -116,6 +116,7 @@ jobs:
 
   docker-image:
     name: Build and Push Docker image
+    if: github.event_name != 'pull_request'
     needs: build-and-test
     runs-on: ubuntu-latest
     outputs:
@@ -140,19 +141,17 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Configure AWS credentials (OIDC)
-        if: github.event_name != 'pull_request'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        if: github.event_name != 'pull_request'
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Set ECR repository name
-        run: | 
+        run: |
           echo "${{ github.event.repository.name }}"
           echo "${{ steps.login-ecr.outputs.registry }}"
 
@@ -173,7 +172,7 @@ jobs:
         with:
           context: .
           file: ./sample-dotnet-webapp/Dockerfile
-          push: ${{ github.event_name != 'pull_request' }}
+          push: true
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
@@ -185,7 +184,6 @@ jobs:
             ASPNETCORE_HTTP_PORT=80
 
       - name: Export image as artifact (PRs only)
-        if: github.event_name == 'pull_request'
         uses: ishworkh/docker-image-artifact-upload@v1
         with:
           image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
@@ -197,6 +195,7 @@ jobs:
   
   ecs-deploy: 
     name: Deploy to ECS Fargate
+    if: github.event_name != 'pull_request'
     needs: docker-image
     runs-on: ubuntu-latest
     env:
@@ -217,15 +216,13 @@ jobs:
           
       - name: Render ECS task definition
         id: render-task
-        if: github.event_name != 'pull_request'
         uses: aws-actions/amazon-ecs-render-task-definition@v1
         with:
           task-definition: .aws/ecs-task-definition.json
           container-name: sample-dotnet-webapp
           image: ${{ env.IMAGE_TAG }}
-             
+
       - name: Deploy to ECS Fargate
-        if: github.event_name != 'pull_request'
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
           task-definition: ${{ steps.render-task.outputs.task-definition }}
