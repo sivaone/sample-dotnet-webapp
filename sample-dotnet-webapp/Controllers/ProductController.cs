@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Mvc;
 using sample_dotnet_webapp.Models;
+using sample_dotnet_webapp.Services;
+using System.Text.Json;
 
 namespace sample_dotnet_webapp.Controllers;
 
 [ApiController]
 [Route("/api/products")]
-public class ProductController : ControllerBase
+public class ProductController(SqsService sqsService) : ControllerBase
 {
     private static readonly Dictionary<int, Product?> Products = new();
 
@@ -16,7 +18,7 @@ public class ProductController : ControllerBase
     }
 
     [HttpPost]
-    public IActionResult Create([FromBody] Product? product)
+    public async Task<IActionResult> Create([FromBody] Product? product)
     {
         if (product == null)
         {
@@ -32,6 +34,9 @@ public class ProductController : ControllerBase
         var added = Products.TryAdd(product.Id, product);
         if (added)
         {
+            // Send event to SQS queue
+            var productJson = JsonSerializer.Serialize(product);
+            await sqsService.SendMessageAsync(productJson);
             // Form absolute URI and return Location header with 201 status
             var uri = new Uri($"{Request.Scheme}://{Request.Host}/api/products/{product.Id}");
             return Created(uri, product);

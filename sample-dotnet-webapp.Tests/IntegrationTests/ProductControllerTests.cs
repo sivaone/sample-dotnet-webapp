@@ -1,24 +1,67 @@
 using System.Net;
 using System.Net.Http.Json;
+using Amazon.SQS;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Shouldly;
+using sample_dotnet_webapp.Services;
 
 namespace sample_dotnet_webapp.Tests.IntegrationTests;
 
-public class ProductControllerTests(WebApplicationFactory<Program> factory)
-    : IClassFixture<WebApplicationFactory<Program>>
+public class FakeSqsService : SqsService
 {
-    private HttpClient CreateHttpsClient() => factory.CreateClient(new WebApplicationFactoryClientOptions
+    public FakeSqsService(IAmazonSQS sqs, IConfiguration configuration)
+        : base(sqs, configuration) { }
+
+    public override async Task SendMessageAsync(string message)
+    {
+        // No-op for tests
+        await Task.CompletedTask;
+    }
+}
+
+public class ProductControllerTests : IClassFixture<WebApplicationFactory<Program>>
+{
+    private readonly WebApplicationFactory<Program> _factory;
+    public ProductControllerTests(WebApplicationFactory<Program> factory)
+    {
+        _factory = factory;
+    }
+
+    private HttpClient CreateHttpsClient() => _factory.CreateClient(new WebApplicationFactoryClientOptions
     {
         BaseAddress = new Uri("https://localhost") // avoid HTTPS redirect from app.UseHttpsRedirection()
     });
 
     public record Product(int Id, string Name, string Description, decimal Price);
 
+    private static WebApplicationFactory<Program> CreateFactoryWithFakeSqs(WebApplicationFactory<Program> factory)
+    {
+        return factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureServices(services =>
+            {
+                services.AddSingleton<IAmazonSQS, AmazonSQSClient>(); // Use default or mock
+                var config = new ConfigurationBuilder().AddInMemoryCollection(
+                    new Dictionary<string, string>
+                    {
+                        {"AWS:SQS:QueueUrl", "http://localhost:4566/000000000000/test-queue"}
+                    }!).Build();
+                services.AddSingleton<IConfiguration>(config);
+                services.AddSingleton<SqsService, FakeSqsService>();
+            });
+        });
+    }
+
     [Fact]
     public async Task Create_Returns201_With_Location_And_Body()
     {
-        var client = CreateHttpsClient();
+        var factoryWithFakeSqs = CreateFactoryWithFakeSqs(_factory);
+        var client = factoryWithFakeSqs.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
 
         var request = new
         {
@@ -46,7 +89,11 @@ public class ProductControllerTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task GetById_Returns_Created_Product()
     {
-        var client = CreateHttpsClient();
+        var factoryWithFakeSqs = CreateFactoryWithFakeSqs(_factory);
+        var client = factoryWithFakeSqs.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
 
         // First create a product
         var createResponse = await client.PostAsJsonAsync("/api/products", new
@@ -78,7 +125,11 @@ public class ProductControllerTests(WebApplicationFactory<Program> factory)
     [Fact]
     public async Task Create_DuplicateId_Returns409()
     {
-        var client = CreateHttpsClient();
+        var factoryWithFakeSqs = CreateFactoryWithFakeSqs(_factory);
+        var client = factoryWithFakeSqs.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
 
         // Create with explicit id unlikely to collide across runs
         var first = await client.PostAsJsonAsync("/api/products", 
