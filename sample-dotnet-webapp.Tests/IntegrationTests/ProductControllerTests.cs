@@ -4,22 +4,11 @@ using Amazon.SQS;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Moq;
 using Shouldly;
 using sample_dotnet_webapp.Services;
 
 namespace sample_dotnet_webapp.Tests.IntegrationTests;
-
-public class FakeSqsService : SqsService
-{
-    public FakeSqsService(IAmazonSQS sqs, IConfiguration configuration)
-        : base(sqs, configuration) { }
-
-    public override async Task SendMessageAsync(string message)
-    {
-        // No-op for tests
-        await Task.CompletedTask;
-    }
-}
 
 public class ProductControllerTests : IClassFixture<WebApplicationFactory<Program>>
 {
@@ -42,14 +31,19 @@ public class ProductControllerTests : IClassFixture<WebApplicationFactory<Progra
         {
             builder.ConfigureServices(services =>
             {
-                services.AddSingleton<IAmazonSQS, AmazonSQSClient>(); // Use default or mock
+                var sqsMock = new Mock<IAmazonSQS>();
+                sqsMock.Setup(s => s.SendMessageAsync(
+                    It.IsAny<Amazon.SQS.Model.SendMessageRequest>(),
+                    It.IsAny<CancellationToken>()))
+                    .ReturnsAsync(new Amazon.SQS.Model.SendMessageResponse { MessageId = "test-message-id" });
+                services.AddSingleton(sqsMock.Object);
                 var config = new ConfigurationBuilder().AddInMemoryCollection(
                     new Dictionary<string, string>
                     {
                         {"AWS:SQS:QueueUrl", "http://localhost:4566/000000000000/test-queue"}
                     }!).Build();
                 services.AddSingleton<IConfiguration>(config);
-                services.AddSingleton<SqsService, FakeSqsService>();
+                services.AddSingleton<SqsService>();
             });
         });
     }
@@ -116,7 +110,11 @@ public class ProductControllerTests : IClassFixture<WebApplicationFactory<Progra
     [Fact]
     public async Task GetById_Unknown_Returns404()
     {
-        var client = CreateHttpsClient();
+        var factoryWithFakeSqs = CreateFactoryWithFakeSqs(_factory);
+        var client = factoryWithFakeSqs.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            BaseAddress = new Uri("https://localhost")
+        });
 
         var response = await client.GetAsync("/api/products/999999");
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
