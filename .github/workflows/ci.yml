@@ -183,11 +183,11 @@ jobs:
           build-args: |
             ASPNETCORE_HTTP_PORT=80
 
-      - name: Export image as artifact (PRs only)
-        uses: ishworkh/docker-image-artifact-upload@v1
-        with:
-          image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
-          retention-days: 7
+#      - name: Export image as artifact (PRs only)
+#        uses: ishworkh/docker-image-artifact-upload@v1
+#        with:
+#          image: ${{ fromJSON(steps.meta.outputs.json).tags[0] }}
+#          retention-days: 7
 
       - name: Set image tag output
         id: set-image-tag
