@@ -11,6 +11,9 @@ builder.Services.AddSingleton<SqsService>();
 
 builder.Logging.SetMinimumLevel(LogLevel.Debug);
 
+var sqsQueueUrl = Environment.GetEnvironmentVariable("SQS_QUEUE_URL");
+Console.WriteLine($"SQS_QUEUE_URL: {sqsQueueUrl}");
+
 var app = builder.Build();
 
 // Intentional to test deployments
@@ -22,6 +25,8 @@ app.UseSwaggerUI(options =>
 {
     options.SwaggerEndpoint("/openapi/v1.json", "API V1");
 });
+
+
 
 app.MapHealthChecks("/health");
 app.Run();
