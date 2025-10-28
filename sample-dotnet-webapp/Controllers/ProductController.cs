@@ -36,7 +36,10 @@ public class ProductController(SqsService sqsService) : ControllerBase
         {
             // Send event to SQS queue
             var productJson = JsonSerializer.Serialize(product);
-            await sqsService.SendMessageAsync(productJson);
+            Console.WriteLine($"Product json: {productJson}");
+            var sqsQueueUrl = Environment.GetEnvironmentVariable("SQS_QUEUE_URL");
+            Console.WriteLine($"SQS_QUEUE_URL: {sqsQueueUrl}");
+            // await sqsService.SendMessageAsync(productJson);
             // Form absolute URI and return Location header with 201 status
             var uri = new Uri($"{Request.Scheme}://{Request.Host}/api/products/{product.Id}");
             return Created(uri, product);
