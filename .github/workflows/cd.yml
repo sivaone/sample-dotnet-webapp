@@ -29,26 +29,39 @@ jobs:
     runs-on: ubuntu-latest
     environment: 
       name: ${{ inputs.environment }}
+    
     env:
       COMMIT_SHA: ${{ inputs.commit_sha }}
       ENVIRONMENT: ${{ inputs.environment }}
       AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
       # Example: Use environment-specific ECS service/cluster names
       ECS_SERVICE: ${{ secrets[format('ECS_SERVICE_{0}', inputs.environment)] }}
       ECS_CLUSTER: ${{ secrets[format('ECS_CLUSTER_{0}', inputs.environment)] }}
+    
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+      
       - name: Print deployment info
         run: |
           echo "Deploying IMAGE_TAG=$IMAGE_TAG to ENVIRONMENT=$ENVIRONMENT"
           echo "ECS_SERVICE=$ECS_SERVICE"
           echo "ECS_CLUSTER=$ECS_CLUSTER"
+          
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+        
+      - name: Set ECR_REGISTRY env
+        run: echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+      
       - name: Fetch image tag from ECR for commit SHA
         id: fetch-image-tag
         run: |
