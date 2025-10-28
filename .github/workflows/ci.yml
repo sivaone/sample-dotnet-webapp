@@ -194,9 +194,8 @@ jobs:
         run: echo "IMAGE_TAG=${{ fromJSON(steps.meta.outputs.json).tags[0] }}" >> $GITHUB_OUTPUT
   
   ecs-deploy: 
-    name: Deploy to ECS Fargate
-#    if: github.event_name != 'pull_request'
-    if: false
+    name: Deploy to ECS Fargate Dev environment
+    if: github.event_name != 'pull_request'
     needs: docker-image
     runs-on: ubuntu-latest
     env:

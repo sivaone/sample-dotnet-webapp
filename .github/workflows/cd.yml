@@ -71,6 +71,7 @@ jobs:
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           # Optionally verify image exists in ECR
           aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION"
+      
       - name: Render ECS task definition
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
@@ -78,6 +79,7 @@ jobs:
           task-definition: .aws/ecs-task-definition.json
           container-name: sample-dotnet-webapp
           image: ${{ env.IMAGE_URI }}
+      
       - name: Deploy to ECS Fargate
         uses: aws-actions/amazon-ecs-deploy-task-definition@v2
         with:
