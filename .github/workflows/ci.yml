@@ -163,6 +163,7 @@ jobs:
           tags: |
             type=raw,value=${{ steps.gitversion.outputs.semVer }}
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=fullsha-${{ github.sha }}
             type=ref,event=branch
             type=ref,event=tag
             type=sha

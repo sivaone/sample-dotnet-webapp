@@ -39,9 +39,24 @@ public class ProductController(SqsService sqsService) : ControllerBase
             Console.WriteLine($"Product json: {productJson}");
             var sqsQueueUrl = Environment.GetEnvironmentVariable("SQS_QUEUE_URL");
             Console.WriteLine($"SQS_QUEUE_URL: {sqsQueueUrl}");
-            // await sqsService.SendMessageAsync(productJson);
+            bool sqsSendFailed = false;
+            string? sqsError = null;
+            try
+            {
+                await sqsService.SendMessageAsync(productJson);
+            }
+            catch (Exception ex)
+            {
+                sqsSendFailed = true;
+                sqsError = ex.Message;
+                Console.WriteLine($"Failed to send SQS message: {ex}");
+            }
             // Form absolute URI and return Location header with 201 status
             var uri = new Uri($"{Request.Scheme}://{Request.Host}/api/products/{product.Id}");
+            if (sqsSendFailed)
+            {
+                return Created(uri, new { product, warning = "Product created, but failed to send SQS message.", sqsError });
+            }
             return Created(uri, product);
         }
         else

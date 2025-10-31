@@ -17,7 +17,6 @@ jobs:
     environment:
       name: prod
     env:
-      COMMIT_SHA: ${{ github.event.release.target_commitish }} # Get commit sha
       ENVIRONMENT: prod
       AWS_REGION: ${{ vars.AWS_REGION }}
       ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
@@ -31,9 +30,25 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Resolve short commit SHA for image tag
+        id: resolve-sha
+        run: |
+          TARGET_COMMITISH="${{ github.event.release.target_commitish }}"
+          echo "TARGET_COMMITISH=$TARGET_COMMITISH"
+          echo "github.sha=${{ github.sha }}"
+          # If it's a SHA (40 hex chars), use it directly
+          if [[ "$TARGET_COMMITISH" =~ ^[0-9a-f]{40}$ ]]; then
+            SHORT_SHA=${TARGET_COMMITISH:0:7}
+          else
+            # Otherwise, resolve branch name to SHA
+            FULL_SHA=$(git rev-parse "$TARGET_COMMITISH")
+            echo "FULL_SHA=$FULL_SHA"
+            SHORT_SHA=${FULL_SHA:0:7}
+          fi
+          echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
       - name: Print deployment info
         run: |
-          echo "Deploying IMAGE_TAG=sha-${COMMIT_SHA} to ENVIRONMENT=${ENVIRONMENT}"
+          echo "Deploying IMAGE_TAG=sha-${SHORT_SHA} to ENVIRONMENT=${ENVIRONMENT}"
           echo "ECS_SERVICE=${ECS_SERVICE}"
           echo "ECS_CLUSTER=${ECS_CLUSTER}"
       - name: Login to Amazon ECR
@@ -41,10 +56,10 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
       - name: Set ECR_REGISTRY env
         run: echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
-      - name: Fetch image tag from ECR for commit SHA
-        id: fetch-image-tag # Form image tag from commit sha and search in ECR
+      - name: Fetch image tag from ECR for short SHA
+        id: fetch-image-tag
         run: |
-          IMAGE_TAG="sha-${COMMIT_SHA}"
+          IMAGE_TAG="sha-${SHORT_SHA}"
           IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
           echo "IMAGE_TAG=$IMAGE_TAG" >> $GITHUB_ENV
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
