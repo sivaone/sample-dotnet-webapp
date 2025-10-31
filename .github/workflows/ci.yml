@@ -195,7 +195,8 @@ jobs:
   
   ecs-deploy: 
     name: Deploy to ECS Fargate Dev environment
-    if: github.event_name != 'pull_request'
+    # if: github.event_name != 'pull_request'
+    if: false
     needs: docker-image
     runs-on: ubuntu-latest
     env:
