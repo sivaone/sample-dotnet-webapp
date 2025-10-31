@@ -1,0 +1,97 @@
+﻿name: Tag & Release
+
+description: Tag latest main commit and create a GitHub release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  tag-and-release:
+    name: Tag and Create Release
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+      - name: GitVersion (setup)
+        uses: gittools/actions/gitversion/setup@v4.1.0
+        with:
+          versionSpec: '6.3.x'
+      - name: GitVersion (determine version)
+        id: gitversion
+        uses: gittools/actions/gitversion/execute@v4
+      - name: Create tag
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -a "${{ steps.gitversion.outputs.semVer }}" -m "Release ${{ steps.gitversion.outputs.semVer }}"
+          git push origin "${{ steps.gitversion.outputs.semVer }}"
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.gitversion.outputs.semVer }}
+          name: Release ${{ steps.gitversion.outputs.semVer }}
+          body: |
+            Automated release for version ${{ steps.gitversion.outputs.semVer }}.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  ecs-deploy:
+    name: Deploy to ECS Fargate
+    needs: tag-and-release
+    runs-on: ubuntu-latest
+    environment:
+      name: prod
+    env:
+      ENVIRONMENT: prod
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_SERVICE: ${{ secrets.ECS_SERVICE_prod }}
+      ECS_CLUSTER: ${{ secrets.ECS_CLUSTER_prod }}
+      IMAGE_TAG: ${{ needs.tag-and-release.outputs.gitversion_semVer || steps.gitversion.outputs.semVer }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+      - name: Print deployment info
+        run: |
+          echo "Deploying IMAGE_TAG=${IMAGE_TAG} to ENVIRONMENT=${ENVIRONMENT}"
+          echo "ECS_SERVICE=${ECS_SERVICE}"
+          echo "ECS_CLUSTER=${ECS_CLUSTER}"
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - name: Set ECR_REGISTRY env
+        run: echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}" >> $GITHUB_ENV
+      - name: Fetch image tag from ECR for release version
+        id: fetch-image-tag
+        run: |
+          IMAGE_URI="${ECR_REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
+          aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION"
+      - name: Render ECS task definition
+        id: render-task
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: .aws/ecs-task-definition.json
+          container-name: sample-dotnet-webapp
+          image: ${{ env.IMAGE_URI }}
+      - name: Deploy to ECS Fargate
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render-task.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
