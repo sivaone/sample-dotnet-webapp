@@ -30,21 +30,12 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
+      - name: Set GITHUB_SHA env
+        run: echo "GITHUB_SHA=${{ github.sha }}" >> $GITHUB_ENV
       - name: Resolve short commit SHA for image tag
         id: resolve-sha
         run: |
-          TARGET_COMMITISH="${{ github.event.release.target_commitish }}"
-          echo "TARGET_COMMITISH=$TARGET_COMMITISH"
-          echo "github.sha=${{ github.sha }}"
-          # If it's a SHA (40 hex chars), use it directly
-          if [[ "$TARGET_COMMITISH" =~ ^[0-9a-f]{40}$ ]]; then
-            SHORT_SHA=${TARGET_COMMITISH:0:7}
-          else
-            # Otherwise, resolve branch name to SHA
-            FULL_SHA=$(git rev-parse "$TARGET_COMMITISH")
-            echo "FULL_SHA=$FULL_SHA"
-            SHORT_SHA=${FULL_SHA:0:7}
-          fi
+          SHORT_SHA="${GITHUB_SHA:0:7}"
           echo "SHORT_SHA=$SHORT_SHA" >> $GITHUB_ENV
       - name: Print deployment info
         run: |
