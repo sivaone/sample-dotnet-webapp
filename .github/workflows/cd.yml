@@ -72,6 +72,13 @@ jobs:
           # Optionally verify image exists in ECR
           aws ecr describe-images --repository-name "$ECR_REPOSITORY" --image-ids imageTag="$IMAGE_TAG" --region "$AWS_REGION"
       
+      - name: Tag image with prod
+        id: tag-prod-image
+        run: |
+          MANIFEST=$(aws ecr batch-get-image --repository-name "$ECR_REPOSITORY" --image-ids imageTag="${IMAGE_TAG}" --query 'images[0].imageManifest' --output text)
+          aws ecr put-image --repository-name "$ECR_REPOSITORY" --image-tag "prod" --image-manifest "$MANIFEST"
+          echo "Tagged image ${IMAGE_TAG} with 'prod' tag"
+      
       - name: Render ECS task definition
         id: render-task
         uses: aws-actions/amazon-ecs-render-task-definition@v1
