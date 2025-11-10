@@ -1,0 +1,23 @@
+﻿{
+  "name": "ASP.NET Core 9.0 Dev Container",
+  "features": {
+    "ghcr.io/devcontainers/features/dotnet:1": {
+      "version": "9.0"
+    },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-dotnettools.csharp",
+        "ms-azuretools.vscode-docker"
+      ]
+    }
+  },
+  "forwardPorts": [5080, 7131],
+  "portsAttributes": {
+    "5080": { "label": "HTTP" },
+    "7131": { "label": "HTTPS" }
+  },
+  "remoteUser": "vscode"
+}
