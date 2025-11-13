@@ -2,6 +2,8 @@ using Amazon.SQS;
 using sample_dotnet_webapp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
+var config = builder.Configuration;
+config.AddSystemsManager("/sample-dotnet-webapp/dev", false, TimeSpan.FromMinutes(5));
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
