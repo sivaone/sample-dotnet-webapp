@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using Amazon.SQS;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,6 +30,15 @@ public class ProductControllerTests : IClassFixture<WebApplicationFactory<Progra
     {
         return factory.WithWebHostBuilder(builder =>
         {
+            builder.UseEnvironment("Test"); // Ensure test environment is set
+            builder.ConfigureAppConfiguration((context, configBuilder) =>
+            {
+                configBuilder.Sources.Clear();
+                configBuilder.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    {"AWS:SQS:QueueUrl", "http://localhost:4566/000000000000/test-queue"},
+                });
+            });
             builder.ConfigureServices(services =>
             {
                 var sqsMock = new Mock<IAmazonSQS>();
@@ -37,12 +47,6 @@ public class ProductControllerTests : IClassFixture<WebApplicationFactory<Progra
                     It.IsAny<CancellationToken>()))
                     .ReturnsAsync(new Amazon.SQS.Model.SendMessageResponse { MessageId = "test-message-id" });
                 services.AddSingleton(sqsMock.Object);
-                var config = new ConfigurationBuilder().AddInMemoryCollection(
-                    new Dictionary<string, string>
-                    {
-                        {"AWS:SQS:QueueUrl", "http://localhost:4566/000000000000/test-queue"}
-                    }!).Build();
-                services.AddSingleton<IConfiguration>(config);
                 services.AddSingleton<SqsService>();
             });
         });

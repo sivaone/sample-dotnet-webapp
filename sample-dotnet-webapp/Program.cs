@@ -3,7 +3,15 @@ using sample_dotnet_webapp.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 var config = builder.Configuration;
-config.AddSystemsManager("/sample-dotnet-webapp/dev", false, TimeSpan.FromMinutes(5));
+
+// Only add SystemsManager config if not running in test environment
+var isTestEnv = builder.Environment.EnvironmentName == "Test" ||
+                Environment.GetEnvironmentVariable("DOTNET_ENVIRONMENT") == "Test" ||
+                Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") == "Test";
+if (!isTestEnv)
+{
+    config.AddSystemsManager("/sample-dotnet-webapp/dev", false, TimeSpan.FromMinutes(5));
+}
 
 builder.Services.AddOpenApi();
 builder.Services.AddControllers();
